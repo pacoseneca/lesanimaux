@@ -1,0 +1,274 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>La Ligue des Animaux</title>
+
+
+<style>
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  background: linear-gradient(135deg, #1f3c88, #070d59);
+  color: white;
+  text-align: center;
+  margin: 0;
+  padding: 0;
+}
+
+
+#app {
+  max-width: 650px;
+  margin: auto;
+  padding: 30px;
+}
+
+
+h1 {
+  margin-bottom: 5px;
+}
+
+
+#mode {
+  margin-bottom: 15px;
+  font-size: 1.1em;
+}
+
+
+#score {
+  font-size: 1.2em;
+  margin-bottom: 20px;
+}
+
+
+#card {
+  background: white;
+  color: #222;
+  border-radius: 20px;
+  padding: 30px;
+}
+
+
+#word {
+  font-size: 2em;
+  margin-bottom: 15px;
+}
+
+
+button {
+  margin: 8px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 12px;
+  font-size: 1em;
+  cursor: pointer;
+  background: #ffcc00;
+}
+
+
+button:hover {
+  background: #ffd633;
+}
+
+
+#audio-btn {
+  background: #00b4d8;
+  color: white;
+}
+
+
+#audio-btn:hover {
+  background: #48cae4;
+}
+
+
+.correct {
+  color: green;
+  font-weight: bold;
+}
+
+
+.wrong {
+  color: red;
+  font-weight: bold;
+}
+
+
+#feedback {
+  margin-top: 15px;
+  font-size: 1.2em;
+}
+
+
+select {
+  padding: 8px;
+  border-radius: 10px;
+  border: none;
+  font-size: 1em;
+}
+</style>
+</head>
+
+
+<body>
+
+
+<div id="app">
+  <h1>🐾 La Ligue des Animaux</h1>
+
+
+  <div id="mode">
+    Modo:
+    <select onchange="changeMode(this.value)">
+      <option value="ES-FR">Español → Francés</option>
+      <option value="FR-ES">Francés → Español</option>
+    </select>
+  </div>
+
+
+  <p id="score">Score : 0</p>
+
+
+  <div id="card">
+    <div id="word">Animal</div>
+
+
+    <button id="audio-btn" onclick="playAudio()" style="display:none">
+      🔊 Écouter
+    </button>
+
+
+    <div id="options"></div>
+  </div>
+
+
+  <p id="feedback"></p>
+  <button onclick="nextQuestion()">Suivant</button>
+</div>
+
+
+<script>
+const animals = [
+  { fr: "le chien", es: "el perro" },
+  { fr: "le chat", es: "el gato" },
+  { fr: "le poisson", es: "el pez" },
+  { fr: "l’oiseau", es: "el pájaro" },
+  { fr: "le hamster", es: "el hámster" },
+  { fr: "le lapin", es: "el conejo" },
+  { fr: "la tortue", es: "la tortuga" },
+  { fr: "la vache", es: "la vaca" },
+  { fr: "le cheval", es: "el caballo" },
+  { fr: "le cochon", es: "el cerdo" },
+  { fr: "le mouton", es: "la oveja" },
+  { fr: "la chèvre", es: "la cabra" },
+  { fr: "la poule", es: "la gallina" },
+  { fr: "le canard", es: "el pato" },
+  { fr: "le lion", es: "el león" },
+  { fr: "le tigre", es: "el tigre" },
+  { fr: "l’éléphant", es: "el elefante" },
+  { fr: "la girafe", es: "la jirafa" },
+  { fr: "le zèbre", es: "la cebra" },
+  { fr: "l’ours", es: "el oso" },
+  { fr: "le loup", es: "el lobo" },
+  { fr: "le requin", es: "el tiburón" },
+  { fr: "le dauphin", es: "el delfín" },
+  { fr: "la baleine", es: "la ballena" },
+  { fr: "le poulpe", es: "el pulpo" },
+  { fr: "la méduse", es: "la medusa" },
+  { fr: "l’étoile de mer", es: "la estrella de mar" },
+  { fr: "le serpent", es: "la serpiente" },
+  { fr: "la grenouille", es: "la rana" },
+  { fr: "l’abeille", es: "la abeja" },
+  { fr: "le papillon", es: "la mariposa" },
+  { fr: "l’araignée", es: "la araña" }
+];
+
+
+let mode = "ES-FR";
+let score = 0;
+let current;
+let synth = window.speechSynthesis;
+
+
+function shuffle(array) {
+  return array.sort(() => Math.random() - 0.5);
+}
+
+
+function changeMode(newMode) {
+  mode = newMode;
+  nextQuestion();
+}
+
+
+function loadQuestion() {
+  current = animals[Math.floor(Math.random() * animals.length)];
+  const wordDiv = document.getElementById("word");
+  const audioBtn = document.getElementById("audio-btn");
+
+
+  if (mode === "ES-FR") {
+    wordDiv.textContent = current.es;
+    audioBtn.style.display = "none";
+  } else {
+    wordDiv.textContent = current.fr;
+    audioBtn.style.display = "inline-block";
+  }
+
+
+  let options = shuffle([...animals]).slice(0, 3);
+  if (!options.includes(current)) {
+    options[Math.floor(Math.random() * options.length)] = current;
+  }
+
+
+  const optionsDiv = document.getElementById("options");
+  optionsDiv.innerHTML = "";
+
+
+  options.forEach(opt => {
+    const btn = document.createElement("button");
+    btn.textContent = mode === "ES-FR" ? opt.fr : opt.es;
+    btn.onclick = () => checkAnswer(opt);
+    optionsDiv.appendChild(btn);
+  });
+}
+
+
+function playAudio() {
+  let utterance = new SpeechSynthesisUtterance(current.fr);
+  utterance.lang = "fr-FR";
+  synth.speak(utterance);
+}
+
+
+function checkAnswer(answer) {
+  const feedback = document.getElementById("feedback");
+  const correct = (mode === "ES-FR") ? answer.fr === current.fr : answer.es === current.es;
+
+
+  if (correct) {
+    score += 10;
+    feedback.textContent = "✅ Correct !";
+    feedback.className = "correct";
+  } else {
+    feedback.textContent = "❌ Incorrect";
+    feedback.className = "wrong";
+  }
+
+
+  document.getElementById("score").textContent = "Score : " + score;
+}
+
+
+function nextQuestion() {
+  document.getElementById("feedback").textContent = "";
+  loadQuestion();
+}
+
+
+loadQuestion();
+</script>
+
+
+</body>
+</html>
